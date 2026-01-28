@@ -1,4 +1,4 @@
-const service = require("./announcement.service");
+const service = require("../services/announcement.service");
 
 exports.getAnnouncements = async (req, res) => {
   try {

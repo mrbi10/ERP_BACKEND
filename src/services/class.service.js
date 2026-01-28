@@ -53,3 +53,33 @@ exports.getAllClasses = async () => {
 
   return rows;
 };
+
+
+exports.getStudentsByClassed = async ({ classId, role, dept_id }) => {
+  let query = "";
+  let params = [];
+
+  if (["CA", "Staff", "HOD"].includes(role)) {
+    query = `
+      SELECT *
+      FROM students
+      WHERE class_id = ?
+        AND dept_id = ?
+      ORDER BY roll_no ASC
+    `;
+    params = [classId, dept_id];
+  } else {
+    // Admin / Principal
+    query = `
+      SELECT *
+      FROM students
+      WHERE class_id = ?
+      ORDER BY roll_no ASC
+    `;
+    params = [classId];
+  }
+
+  const [rows] = await pool.query(query, params);
+  return rows;
+};
+

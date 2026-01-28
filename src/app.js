@@ -29,7 +29,7 @@ app.use("/api/lateentry", require("./routes/lateentry.routes"));
 app.use("/api/attendance", require("./routes/attendance.routes"));
 app.use("/api/students", require("./routes/student.routes"));
 app.use("/api/announcements", require("./routes/announcement.routes"));
-app.use("/api/classes", require("./routes/class.routes"));
+app.use("/api/", require("./routes/class.routes"));
 app.use("/api/", require("./routes/dashboard.routes"));
 app.use("/api/faculty", require("./routes/faculty.routes"));
 

@@ -25,3 +25,14 @@ exports.getAllClasses = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+exports.getStudentsByClassed = async (req) => {
+  const { classId } = req.params;
+  const { role, dept_id } = req.user;
+
+  return service.getStudentsByClassed({
+    classId,
+    role,
+    dept_id,
+  });
+};

@@ -259,7 +259,11 @@ exports.getTestAssignmentsWithStudents = async (testId) => {
 exports.getGlobalAnalytics = async (user) => {
   const { role, assigned_class_id, dept_id, user_id } = user;
 
-  let filter = "WHERE a.status IN ('submitted','auto_submitted')";
+  let filter = `
+    WHERE a.status IN ('submitted','auto_submitted')
+      AND t.is_active = 1
+      AND c.is_active = 1
+  `;
   const params = [];
 
   if (role === "trainer") {
@@ -278,10 +282,13 @@ exports.getGlobalAnalytics = async (user) => {
       COUNT(DISTINCT s.student_id) AS total_students,
       COUNT(DISTINCT t.test_id) AS total_tests,
       COUNT(a.attempt_id) AS total_attempts,
-      ROUND(SUM(a.pass_status='pass')/COUNT(a.attempt_id)*100,2) AS pass_percentage
+      ROUND(
+        SUM(a.pass_status = 'pass') / NULLIF(COUNT(a.attempt_id), 0) * 100,
+        2
+      ) AS pass_percentage
     FROM test_attempts a
-    JOIN tests t ON t.test_id = a.test_id WHERE t.is_active = 1
-    JOIN training_courses c ON c.course_id = t.course_id WHERE c.is_active = 1
+    JOIN tests t ON t.test_id = a.test_id
+    JOIN training_courses c ON c.course_id = t.course_id
     JOIN students s ON s.student_id = a.student_id
     ${filter}
   `, params);
@@ -289,14 +296,20 @@ exports.getGlobalAnalytics = async (user) => {
   return { summary };
 };
 
+
 exports.getGlobalResults = async (user) => {
-  let where = "WHERE a.status IN ('submitted','auto_submitted')";
+  let where = `
+    WHERE a.status IN ('submitted','auto_submitted')
+      AND t.is_active = 1
+      AND c.is_active = 1
+  `;
   const params = [];
 
   if (user.role === "CA") {
     where += " AND s.class_id = ?";
     params.push(user.assigned_class_id);
   }
+
   if (user.role === "HOD") {
     where += " AND s.dept_id = ?";
     params.push(user.dept_id);
@@ -312,8 +325,8 @@ exports.getGlobalResults = async (user) => {
       a.pass_status,
       a.submitted_at
     FROM test_attempts a
-    JOIN tests t ON t.test_id = a.test_id WHERE t.is_active = 1
-    JOIN training_courses c ON c.course_id = t.course_id WHERE c.is_active = 1
+    JOIN tests t ON t.test_id = a.test_id
+    JOIN training_courses c ON c.course_id = t.course_id
     JOIN students s ON s.student_id = a.student_id
     ${where}
     ORDER BY a.submitted_at DESC
@@ -321,6 +334,7 @@ exports.getGlobalResults = async (user) => {
 
   return rows;
 };
+
 
 exports.getStudentResults = async (user) => {
   const [[student]] = await pool.query(
@@ -1043,7 +1057,7 @@ exports.logViolation = async (req) => {
     await terminateAttempt(attempt_id, violation_type);
     await submitAttemptInternal(attempt_id);
   }
-  
+
 
   return {
     success: true,

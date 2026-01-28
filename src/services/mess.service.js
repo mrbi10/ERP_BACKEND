@@ -1,5 +1,52 @@
 const pool = require("../config/db");
 
+
+// ================= MESS MENU =================
+exports.getMessMenu = async (day) => {
+  let query = "SELECT * FROM mess_menu";
+  const params = [];
+
+  if (day) {
+    query += " WHERE day_of_week = ?";
+    params.push(day);
+  }
+
+  query += `
+    ORDER BY FIELD(
+      day_of_week,
+      'Monday','Tuesday','Wednesday','Thursday',
+      'Friday','Saturday','Sunday'
+    )
+  `;
+
+  const [rows] = await pool.query(query, params);
+
+  if (!rows.length) {
+    return [];
+  }
+
+  return rows.map(row => ({
+    day: row.day_of_week,
+    jain: {
+      main_dish: row.jain_main_dish,
+      side_dish_1: row.jain_side_dish_1,
+      side_dish_2: row.jain_side_dish_2,
+      rasam_curry: row.jain_rasam_curry,
+      extras_1: row.jain_extras_1,
+      extras_2: row.jain_extras_2
+    },
+    non_jain: {
+      main_dish: row.non_jain_main_dish,
+      sabji_1: row.non_jain_sabji_1,
+      sabji_2: row.non_jain_sabji_2,
+      sambar: row.non_jain_sambar,
+      rasam: row.non_jain_rasam,
+      extras: row.non_jain_extras
+    }
+  }));
+};
+
+
 // ================= AUTO COUNT =================
 exports.getAutoCount = async () => {
   const today = new Date().toISOString().split("T")[0];

@@ -8,6 +8,12 @@ const messUsecase = require("../usecases/mess.usecase");
 const ROLES = ["Principal", "HOD", "MessAdmin"];
 
 router.get(
+  "/",
+  authenticateToken,
+  messUsecase.getmessmenu
+);
+
+router.get(
   "/auto-count",
   authenticateToken,
   authorize(ROLES),

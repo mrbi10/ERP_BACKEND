@@ -1,6 +1,26 @@
 const messService = require("../services/mess.service");
 const { logActivity } = require("../services/activityLog.service");
 
+/// ================= MESS MENU =================
+exports.getmessmenu = async (req, res) => {
+  try {
+    const menu = await messService.getMessMenu(); 
+
+    await logActivity({
+      req,
+      user: req.user,
+      module: "MESS",
+      actionType: "READ",
+      action: "GET_MENU",
+      description: "Fetched mess menu"
+    });
+
+    res.json(menu);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ================= AUTO COUNT =================
 exports.getAutoCount = async (req, res) => {
   try {
