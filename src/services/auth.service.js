@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 
+
 exports.login = async ({ email, password }) => {
   const [rows] = await pool.query(
     `
@@ -43,3 +44,35 @@ exports.login = async ({ email, password }) => {
   delete user.password;
   return { token, user };
 };
+
+
+exports.getUserByEmail = async (email) => {
+  const [[row]] = await pool.query(
+    "SELECT user_id, name, email FROM users WHERE email = ?",
+    [email]
+  );
+  return row;
+};
+
+exports.saveResetToken = async (userId, token, expires) => {
+  await pool.query(
+    "UPDATE users SET reset_token = ?, reset_expires = ? WHERE user_id = ?",
+    [token, expires, userId]
+  );
+};
+
+exports.getUserByResetToken = async (token) => {
+  const [[row]] = await pool.query(
+    "SELECT * FROM users WHERE reset_token = ? AND reset_expires > NOW()",
+    [token]
+  );
+  return row;
+};
+
+exports.updatePassword = async (userId, hashedPassword) => {
+  await pool.query(
+    "UPDATE users SET password = ?, reset_token = NULL WHERE user_id = ?",
+    [hashedPassword, userId]
+  );
+};
+

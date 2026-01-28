@@ -32,6 +32,8 @@ app.use("/api/announcements", require("./routes/announcement.routes"));
 app.use("/api/", require("./routes/class.routes"));
 app.use("/api/", require("./routes/dashboard.routes"));
 app.use("/api/faculty", require("./routes/faculty.routes"));
+app.use("/api/marks", require("./routes/marks.routes"));
+app.use("/api/subjects", require("./routes/subject.routes"));
 
 
 module.exports = app;

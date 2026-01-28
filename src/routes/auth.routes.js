@@ -6,5 +6,7 @@ const captchaUsecase = require("../usecases/captcha.usecase");
 
 router.get("/captcha", captchaUsecase.getCaptcha);
 router.post("/login", authUsecase.login);
+router.post("/forgotpassword", authUsecase.forgotPassword);
+router.post("/resetpassword/:token", authUsecase.resetPassword);
 
 module.exports = router;
