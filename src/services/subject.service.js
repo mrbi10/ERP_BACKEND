@@ -1,92 +1,112 @@
 const pool = require("../config/db");
 
-// ===============================
-// Get subjects (role aware)
-// ===============================
-exports.getSubjects = async (req) => {
-  const { class_id, dept_id } = req.query;
-  const { role, id: userId, dept_id: userDept } = req.user;
+/**
+ * Create Subject
+ */
+exports.createSubject = async (data) => {
+  const sql = `
+    INSERT INTO subjects
+    (subject_code, subject_name, regulation, dept_id, class_id, staff_id,
+     periods_per_week, is_active, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+  `;
 
-  let query = `
-    SELECT s.*, c.dept_id, c.year, c.section
-    FROM subjects s
-    JOIN classes c ON s.class_id = c.class_id
-    WHERE 1=1
+  const values = [
+    data.subject_code,
+    data.subject_name,
+    data.regulation,
+    data.dept_id,
+    data.class_id,
+    data.staff_id,
+    data.periods_per_week || 5,
+    data.created_by
+  ];
+
+  const [result] = await pool.query(sql, values);
+  return result;
+};
+
+/**
+ * Get Subjects (role-based visibility)
+ */
+exports.getSubjects = async ({ role, dept_id, class_id }) => {
+  let sql = `
+    SELECT *
+    FROM subjects
+    WHERE is_active = 1
   `;
   const params = [];
 
-  if (role === "Staff") {
-    query += " AND s.staff_id = ?";
-    params.push(userId);
-  } else if (role === "HOD") {
-    query += " AND c.dept_id = ?";
-    params.push(userDept);
-  }
-
-  if (dept_id) {
-    query += " AND c.dept_id = ?";
+  if (role === "HOD") {
+    sql += " AND dept_id = ?";
     params.push(dept_id);
   }
 
-  if (class_id) {
-    query += " AND s.class_id = ?";
-    params.push(class_id);
+  if (role === "CA") {
+    sql += " AND dept_id = ? AND class_id = ?";
+    params.push(dept_id, class_id);
   }
 
-  query += " ORDER BY c.year, c.section, s.subject_name";
-
-  const [rows] = await pool.query(query, params);
-  return rows;
-};
-
-// ===============================
-// Get subjects handled by staff / CA
-// ===============================
-exports.getStaffSubjects = async (req) => {
-  const staffId = req.user.id;
-  const role = req.user.role;
-
-  // Subjects directly handled
-  const [handledSubjects] = await pool.query(
-    `SELECT * FROM subjects WHERE staff_id = ?`,
-    [staffId]
-  );
-
-  let caSubjects = [];
-
-  if (["CA", "Staff"].includes(role)) {
-    const [caClasses] = await pool.query(
-      `SELECT class_id FROM classes WHERE ca_id = ? OR assigned_ca_id = ?`,
-      [staffId, staffId]
-    );
-
-    if (caClasses.length > 0) {
-      const classIds = caClasses.map(c => c.class_id);
-
-      const [rows] = await pool.query(
-        `SELECT * FROM subjects WHERE class_id IN (?)`,
-        [classIds]
-      );
-
-      caSubjects = rows.map(s => ({
-        ...s,
-        from_ca: true
-      }));
+  if (role === "Principal") {
+    if (dept_id) {
+      sql += " AND dept_id = ?";
+      params.push(dept_id);
+    }
+    if (class_id) {
+      sql += " AND class_id = ?";
+      params.push(class_id);
     }
   }
 
-  const allSubjects = [
-    ...handledSubjects.map(s => ({ ...s, from_ca: false })),
-    ...caSubjects
+  sql += " ORDER BY subject_name";
+
+  console.log("Executing SQL:", sql, "with params:", params);
+
+  const [rows] = await pool.query(sql, params);
+  return rows;
+};
+
+
+/**
+ * Update Subject
+ */
+exports.updateSubject = async (subject_id, data) => {
+  const sql = `
+    UPDATE subjects SET
+      subject_code = ?,
+      subject_name = ?,
+      regulation = ?,
+      dept_id = ?,
+      class_id = ?,
+      staff_id = ?,
+      periods_per_week = ?,
+      updated_by = ?
+    WHERE subject_id = ?
+  `;
+
+  const values = [
+    data.subject_code,
+    data.subject_name,
+    data.regulation,
+    data.dept_id,
+    data.class_id,
+    data.staff_id,
+    data.periods_per_week,
+    data.updated_by,
+    subject_id
   ];
 
-  const uniqueSubjects = [
-    ...new Map(allSubjects.map(s => [s.subject_id, s])).values()
-  ];
+  await pool.query(sql, values);
+};
 
-  return {
-    handled_subjects: handledSubjects,
-    ca_subjects: caSubjects,
-    subjects: uniqueSubjects
-  };
+/**
+ * Soft Delete
+ */
+exports.softDeleteSubject = async (subject_id, user_id) => {
+  const sql = `
+    UPDATE subjects
+    SET is_active = 0, updated_by = ?
+    WHERE subject_id = ?
+  `;
+  await pool.query(sql, [user_id, subject_id]);
 };

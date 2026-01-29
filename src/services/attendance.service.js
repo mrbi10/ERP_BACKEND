@@ -190,4 +190,29 @@ exports.getStudentAttendance = async (rollNo) => {
   return rows;
 };
 
+exports.getClassSummary = async (user) => {
+  const sql = `
+    SELECT 
+      s.class_id,
 
+      COUNT(DISTINCT s.student_id) AS total_students,
+
+      COUNT(a.attendance_id) AS total_attendance_records,
+
+      SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS present_count,
+
+      ROUND(
+        (SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) 
+        / NULLIF(COUNT(a.attendance_id), 0)) * 100,
+        2
+      ) AS overall_attendance_percentage
+
+    FROM students s
+    LEFT JOIN attendance a ON a.student_id = s.student_id
+    WHERE s.dept_id = ? and s.class_id = ?
+    GROUP BY s.class_id
+  `;
+
+  const [rows] = await pool.query(sql, [user.dept_id, user.assigned_class_id]);
+  return rows;
+};

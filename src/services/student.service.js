@@ -83,10 +83,14 @@ exports.createStudent = async (data) => {
 
         const hashed = await bcrypt.hash(data.roll_no, 10);
 
+        if (!["M", "F"].includes(data.gender)) {
+            throw new Error("Invalid gender value");
+        }
+
         const [userRes] = await conn.execute(
-            `INSERT INTO users (name, email, password, role, dept_id, assigned_class_id)
+            `INSERT INTO users (name,gender, email, password, role, dept_id, assigned_class_id)
        VALUES (?, ?, ?, 'student', ?, ?)`,
-            [data.name, data.email, hashed, data.dept_id, data.class_id]
+            [data.name, data.gender, data.email, hashed, data.dept_id, data.class_id]
         );
 
         const [stuRes] = await conn.execute(
@@ -122,6 +126,11 @@ exports.createStudent = async (data) => {
 exports.updateStudent = async (studentId, data) => {
     const fields = [];
     const values = [];
+
+    if (data.gender !== undefined) {
+        fields.push("gender = ?");
+        values.push(data.gender);
+    }
 
     if (data.jain !== undefined) {
         fields.push("jain = ?");
