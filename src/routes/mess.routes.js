@@ -3,16 +3,19 @@ const router = express.Router();
 
 const authenticateToken = require("../middlewares/authenticateToken");
 const authorize = require("../middlewares/authorize");
+
 const messUsecase = require("../usecases/mess.usecase");
 
 const ROLES = ["Principal", "HOD", "MessAdmin"];
 
+// ===== MENU =====
 router.get(
   "/",
   authenticateToken,
-  messUsecase.getmessmenu
+  messUsecase.getMessMenu
 );
 
+// ===== AUTO COUNT =====
 router.get(
   "/auto-count",
   authenticateToken,
@@ -20,6 +23,7 @@ router.get(
   messUsecase.getAutoCount
 );
 
+// ===== DAILY COUNT =====
 router.post(
   "/save",
   authenticateToken,
@@ -27,11 +31,33 @@ router.post(
   messUsecase.saveMessCount
 );
 
+router.put(
+  "/day/:date",
+  authenticateToken,
+  authorize(ROLES),
+  messUsecase.updateMessCount
+);
+
+router.delete(
+  "/day/:date",
+  authenticateToken,
+  authorize(ROLES),
+  messUsecase.deleteMessCount
+);
+
+// ===== PAYMENTS =====
 router.post(
   "/payment",
   authenticateToken,
   authorize(ROLES),
   messUsecase.savePayment
+);
+
+router.delete(
+  "/payment/:id",
+  authenticateToken,
+  authorize(ROLES),
+  messUsecase.deletePayment
 );
 
 router.get(
@@ -48,6 +74,7 @@ router.get(
   messUsecase.getNextPaymentStart
 );
 
+// ===== HISTORY =====
 router.get(
   "/history",
   authenticateToken,
@@ -61,5 +88,14 @@ router.get(
   authorize(ROLES),
   messUsecase.getRangeSummary
 );
+
+router.put(
+  "/payment/:id",
+  authenticateToken,
+  authorize(ROLES),
+  messUsecase.updatePayment   // 👈 REQUIRED
+);
+
+
 
 module.exports = router;

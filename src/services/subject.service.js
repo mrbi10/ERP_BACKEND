@@ -60,7 +60,6 @@ exports.getSubjects = async ({ role, dept_id, class_id }) => {
 
   sql += " ORDER BY subject_name";
 
-  console.log("Executing SQL:", sql, "with params:", params);
 
   const [rows] = await pool.query(sql, params);
   return rows;

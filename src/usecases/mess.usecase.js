@@ -1,125 +1,164 @@
 const messService = require("../services/mess.service");
 const { logActivity } = require("../services/activityLog.service");
 
-/// ================= MESS MENU =================
-exports.getmessmenu = async (req, res) => {
+// ===== MENU =====
+exports.getMessMenu = async (req, res) => {
   try {
-    const menu = await messService.getMessMenu(); 
-
-    await logActivity({
-      req,
-      user: req.user,
-      module: "MESS",
-      actionType: "READ",
-      action: "GET_MENU",
-      description: "Fetched mess menu"
-    });
-
-    res.json(menu);
+    const data = await messService.getMessMenu(req.query.day);
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================= AUTO COUNT =================
+// ===== AUTO COUNT =====
 exports.getAutoCount = async (req, res) => {
   try {
-    const result = await messService.getAutoCount();
-
-    await logActivity({
-      req,
-      user: req.user,
-      module: "MESS",
-      actionType: "READ",
-      action: "AUTO_COUNT",
-      description: "Fetched today's auto plate count"
-    });
-
-    res.json(result);
+    const data = await messService.getAutoCount();
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================= SAVE COUNT =================
+// ===== DAILY COUNT =====
 exports.saveMessCount = async (req, res) => {
   try {
     const result = await messService.saveMessCount(req);
 
     await logActivity({
-      req,
-      user: req.user,
+      user: req.user.name,
+      action: "SAVE_MESS_COUNT",
       module: "MESS",
-      actionType: "UPSERT",
-      action: "SAVE_COUNT",
-      refTable: "mess_count",
-      newData: req.body
+      data: req.body
     });
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(400).json({ message: err.message });
   }
 };
 
-// ================= PAYMENT =================
+exports.updateMessCount = async (req, res) => {
+  try {
+    const result = await messService.updateMessCount(req);
+
+    await logActivity({
+      user: req.user.name,
+      action: "UPDATE_MESS_COUNT",
+      module: "MESS",
+      data: { date: req.params.date, ...req.body }
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+exports.deleteMessCount = async (req, res) => {
+  try {
+    const result = await messService.deleteMessCount(req);
+
+    await logActivity({
+      user: req.user.name,
+      action: "DELETE_MESS_COUNT",
+      module: "MESS",
+      data: { date: req.params.date }
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// ===== PAYMENTS =====
 exports.savePayment = async (req, res) => {
   try {
     const result = await messService.savePayment(req);
 
     await logActivity({
-      req,
-      user: req.user,
+      user: req.user.name,
+      action: "SAVE_MESS_PAYMENT",
       module: "MESS",
-      actionType: "CREATE",
-      action: "SAVE_PAYMENT",
-      refTable: "mess_payments",
-      newData: result
+      data: result
     });
 
-    res.json({ success: true, message: "Payment recorded successfully" });
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: "Payment save failed" });
+    res.status(400).json({ message: err.message });
   }
 };
 
-// ================= PAYMENT HISTORY =================
+exports.deletePayment = async (req, res) => {
+  try {
+    const result = await messService.deletePayment(req);
+
+    await logActivity({
+      user: req.user.name,
+      action: "DELETE_MESS_PAYMENT",
+      module: "MESS",
+      data: { payment_id: req.params.id }
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// ===== READ =====
 exports.getPaymentHistory = async (req, res) => {
   try {
-    const records = await messService.getPaymentHistory();
-
-    res.json({ success: true, records });
-  } catch {
-    res.status(500).json({ success: false, message: "Failed to load payment history" });
+    const data = await messService.getPaymentHistory();
+    res.json({ records: data });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================= NEXT START =================
 exports.getNextPaymentStart = async (req, res) => {
   try {
-    const result = await messService.getNextPaymentStart();
-    res.json(result);
-  } catch {
-    res.status(500).json({ success: false, message: "Failed to load next start date" });
+    const data = await messService.getNextPaymentStart();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================= HISTORY =================
 exports.getMessHistory = async (req, res) => {
   try {
-    const records = await messService.getMessHistory();
-    res.json({ success: true, records });
-  } catch {
-    res.status(500).json({ success: false, message: "Server error while fetching history" });
+    const data = await messService.getMessHistory();
+    res.json({ records: data });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================= RANGE =================
 exports.getRangeSummary = async (req, res) => {
   try {
-    const result = await messService.getRangeSummary(req);
-    res.json(result);
+    const data = await messService.getRangeSummary(req);
+    res.json(data);
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(400).json({ message: err.message });
+  }
+};
+
+exports.updatePayment = async (req, res) => {
+  try {
+    const result = await messService.updatePayment(req);
+
+    await logActivity({
+      user: req.user.name,
+      action: "UPDATE_MESS_PAYMENT",
+      module: "MESS",
+      old_data: result.old,
+      new_data: result.new
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 };

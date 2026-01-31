@@ -27,7 +27,7 @@ exports.getAdminOverview = async ({ deptId, classId }) => {
       SUM(s.hostel = 1) AS total_hostel,
       SUM(s.bus = 1) AS total_bus
     FROM students s
-    ${whereClause}
+    ${whereClause} AND s.is_active = 1
     `,
     params
   );
@@ -91,7 +91,7 @@ exports.getProfile = async (user) => {
         u.dept_id
       FROM students s
       JOIN users u ON s.email = u.email
-      WHERE s.roll_no = ?
+      WHERE s.roll_no = ? AND s.is_active = 1
       `,
       [user.roll_no]
     );

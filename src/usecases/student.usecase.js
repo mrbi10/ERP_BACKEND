@@ -1,13 +1,29 @@
 const studentService = require("../services/student.service");
+const { logActivity } = require("../services/activityLog.service");
 
 exports.getStudents = async (req, res) => {
   try {
-    const students = await studentService.getStudents(req.user);
-    res.json(students);
+    const { class_id, dept_id } = req.query;
+
+    const rows = await studentService.getStudents(req.user, {
+      class_id: class_id ? Number(class_id) : null,
+      dept_id: dept_id ? Number(dept_id) : null
+    });
+
+    res.json({
+      success: true,
+      data: rows
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("getStudents error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
+
 
 exports.getStudentsByDepartment = async (req, res) => {
   try {
@@ -37,11 +53,16 @@ exports.createStudent = async (req, res) => {
 };
 
 exports.updateStudent = async (req, res) => {
+  console.log(req)
   try {
-    await studentService.updateStudent(req.params.studentId, req.body);
-    res.json({ success: true });
+    const result = await studentService.updateStudent(
+      req.params.studentId,
+      req.body,
+      req.user
+    );
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 

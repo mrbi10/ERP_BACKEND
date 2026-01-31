@@ -29,7 +29,7 @@ exports.markAttendance = async (user, attendanceList) => {
       if (!regNo || !subjectId || !date || !period) continue;
 
       const [[student]] = await conn.query(
-        "SELECT student_id, class_id FROM students WHERE roll_no = ?",
+        "SELECT student_id, class_id FROM students WHERE roll_no = ? AND is_active = 1",
         [regNo]
       );
       if (!student || !caClasses.includes(student.class_id)) continue;
@@ -209,7 +209,7 @@ exports.getClassSummary = async (user) => {
 
     FROM students s
     LEFT JOIN attendance a ON a.student_id = s.student_id
-    WHERE s.dept_id = ? and s.class_id = ?
+    WHERE s.dept_id = ? and s.class_id = ? and s.is_active = 1
     GROUP BY s.class_id
   `;
 

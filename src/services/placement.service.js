@@ -8,7 +8,7 @@ const {
 
 exports.getStudentCourses = async (rollNo) => {
   const [[student]] = await pool.query(
-    "SELECT student_id, dept_id, class_id FROM students WHERE roll_no = ?",
+    "SELECT student_id, dept_id, class_id FROM students WHERE roll_no = ? AND is_active = 1",
     [rollNo]
   );
 
@@ -95,7 +95,7 @@ exports.getStudentCourseTests = async (req) => {
   const rollNo = req.user.roll_no;
 
   const [[student]] = await pool.query(
-    "SELECT dept_id, class_id FROM students WHERE roll_no = ?",
+    "SELECT dept_id, class_id FROM students WHERE roll_no = ? AND is_active = 1",
     [rollNo]
   );
 
@@ -221,7 +221,7 @@ exports.getTestAssignmentsWithStudents = async (testId) => {
     JOIN training_test_assignments a
       ON a.dept_id = s.dept_id
      AND a.class_id = s.class_id and a.is_active = 1
-    WHERE a.test_id = ?
+    WHERE a.test_id = ? AND s.is_active = 1
     ORDER BY s.dept_id, s.class_id, s.roll_no
     `,
     [testId]
@@ -338,7 +338,7 @@ exports.getGlobalResults = async (user) => {
 
 exports.getStudentResults = async (user) => {
   const [[student]] = await pool.query(
-    "SELECT student_id FROM students WHERE roll_no = ?",
+    "SELECT student_id FROM students WHERE roll_no = ? AND is_active = 1",
     [user.roll_no]
   );
 
@@ -420,7 +420,7 @@ exports.getTestAttempts = async (testId) => {
 
 exports.getStudentTestStatus = async (user, testId) => {
   const [[student]] = await pool.query(
-    "SELECT dept_id, class_id FROM students WHERE roll_no = ?",
+    "SELECT dept_id, class_id FROM students WHERE roll_no = ? AND is_active = 1",
     [user.roll_no]
   );
 
@@ -665,7 +665,7 @@ exports.sendTestNotifications = async ({
       JOIN training_test_assignments a
         ON a.dept_id = s.dept_id
        AND a.class_id = s.class_id
-      WHERE a.test_id = ?
+      WHERE a.test_id = ? AND s.is_active = 1
         AND s.email IS NOT NULL
       `,
       [testId]
@@ -736,7 +736,7 @@ exports.startTest = async (req) => {
     req.socket.remoteAddress;
 
   const [[student]] = await pool.query(
-    "SELECT student_id, dept_id, class_id FROM students WHERE roll_no = ?",
+    "SELECT student_id, dept_id, class_id FROM students WHERE roll_no = ? AND is_active = 1",
     [rollNo]
   );
 

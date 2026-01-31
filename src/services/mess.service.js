@@ -195,3 +195,73 @@ exports.getRangeSummary = async (req) => {
     total_plates: rows[0].total_plates || 0
   };
 };
+
+
+exports.updateMessCount = async (req) => {
+  const { date } = req.params;
+  const { jain_count, non_jain_count } = req.body;
+  const user = req.user.name;
+
+  const [[row]] = await pool.query(
+    "SELECT * FROM mess_count WHERE date = ?",
+    [date]
+  );
+
+  if (!row) throw new Error("Record not found");
+  if (row.is_locked) throw new Error("This day is locked due to payment");
+
+  await pool.query(
+    `UPDATE mess_count
+     SET jain_count = ?, non_jain_count = ?, created_by = ?
+     WHERE date = ?`,
+    [jain_count, non_jain_count, user, date]
+  );
+
+  await pool.query(
+    `INSERT INTO mess_logs (action, reference_type, reference_id, old_data, new_data, performed_by)
+     VALUES ('UPDATE','MESS_DAY', ?, ?, ?, ?)`,
+    [
+      row.id,
+      JSON.stringify(row),
+      JSON.stringify({ jain_count, non_jain_count }),
+      user
+    ]
+  );
+
+  return { success: true };
+};
+
+exports.updatePayment = async (req) => {
+  const { id } = req.params;
+  const { price_per_plate } = req.body;
+
+  const [[oldPayment]] = await pool.query(
+    "SELECT * FROM mess_payments WHERE id = ?",
+    [id]
+  );
+
+  if (!oldPayment) {
+    throw new Error("Payment not found");
+  }
+
+  const total_amount = oldPayment.total_plates * price_per_plate;
+
+  await pool.query(
+    `
+    UPDATE mess_payments
+    SET price_per_plate = ?, total_amount = ?
+    WHERE id = ?
+    `,
+    [price_per_plate, total_amount, id]
+  );
+
+  return {
+    old: oldPayment,
+    new: {
+      ...oldPayment,
+      price_per_plate,
+      total_amount
+    }
+  };
+};
+

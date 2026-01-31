@@ -25,7 +25,7 @@ app.use("/api", require("./routes/auth.routes"));
 app.use("/api/logs", require("./routes/activityLog.routes"));
 app.use("/api/placement-training", require("./routes/placement.routes"));
 app.use("/api/mess/",require("./routes/mess.routes"));
-app.use("/api/lateentry", require("./routes/lateentry.routes"));
+app.use("/api/attendance-logs", require("./routes/attendanceLogs.routes"));
 app.use("/api/attendance", require("./routes/attendance.routes"));
 app.use("/api/students", require("./routes/student.routes"));
 app.use("/api/announcements", require("./routes/announcement.routes"));

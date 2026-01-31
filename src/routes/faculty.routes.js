@@ -3,24 +3,46 @@ const router = express.Router();
 
 const authenticateToken = require("../middlewares/authenticateToken");
 const authorize = require("../middlewares/authorize");
-const facultyusecase = require("../usecases/faculty.usecase");
+const facultyUsecase = require("../usecases/faculty.usecase");
 
+// LIST + FILTER
 router.get(
   "/",
   authenticateToken,
   authorize(["Principal", "HOD"]),
-  async (req, res) => {
-    try {
-      const result = await facultyusecase.getFacultyList(req);
-      res.json(result);
-    } catch (err) {
-      console.error("Faculty route error:", err);
-      res.status(500).json({
-        success: false,
-        message: err.message || "Server error while fetching faculty list",
-      });
-    }
-  }
+  (req, res) => facultyUsecase.getFacultyList(req, res)
+);
+
+// GET ONE
+router.get(
+  "/:user_id",
+  authenticateToken,
+  authorize(["Principal", "HOD"]),
+  (req, res) => facultyUsecase.getFacultyById(req, res)
+);
+
+// CREATE
+router.post(
+  "/",
+  authenticateToken,
+  authorize(["Principal"]),
+  (req, res) => facultyUsecase.createFaculty(req, res)
+);
+
+// UPDATE
+router.put(
+  "/:user_id",
+  authenticateToken,
+  authorize(["Principal", "HOD"]),
+  (req, res) => facultyUsecase.updateFaculty(req, res)
+);
+
+// DELETE
+router.delete(
+  "/:user_id",
+  authenticateToken,
+  authorize(["Principal"]),
+  (req, res) => facultyUsecase.deleteFaculty(req, res)
 );
 
 module.exports = router;

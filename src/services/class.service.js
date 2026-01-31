@@ -64,7 +64,8 @@ exports.getStudentsByClassed = async ({ classId, role, dept_id }) => {
       SELECT *
       FROM students
       WHERE class_id = ?
-        AND dept_id = ?
+        AND dept_id = ? 
+        AND is_active = 1
       ORDER BY roll_no ASC
     `;
     params = [classId, dept_id];
@@ -74,6 +75,7 @@ exports.getStudentsByClassed = async ({ classId, role, dept_id }) => {
       SELECT *
       FROM students
       WHERE class_id = ?
+        AND is_active = 1
       ORDER BY roll_no ASC
     `;
     params = [classId];

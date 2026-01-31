@@ -9,21 +9,21 @@ router.get("/departments/:dept_id/students", authenticateToken, studentUsecase.g
 router.get("/classes/:classId/students", authenticateToken, studentUsecase.getStudentsByClass);
 
 router.post(
-    "/student",
+    "/",
     authenticateToken,
     authorize(["Principal", "CA", "HOD", "Staff"]),
     studentUsecase.createStudent
 );
 
 router.put(
-    "/student/:studentId",
+    "/:studentId",
     authenticateToken,
     authorize(["Staff", "CA", "HOD", "Principal"]),
     studentUsecase.updateStudent
 );
 
 router.delete(
-    "/student/:student_id",
+    "/:student_id",
     authenticateToken,
     authorize(["Principal", "CA", "HOD"]),
     studentUsecase.deleteStudent

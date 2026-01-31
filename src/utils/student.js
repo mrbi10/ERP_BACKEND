@@ -12,7 +12,7 @@ const getStudentIdFromToken = async (req) => {
   // Prefer roll_no if present (fast + reliable)
   if (roll_no) {
     const [[student]] = await pool.query(
-      `SELECT student_id FROM students WHERE roll_no = ?`,
+      `SELECT student_id FROM students WHERE roll_no = ? AND is_active = 1`,
       [roll_no]
     );
     return student?.student_id || null;
@@ -21,7 +21,7 @@ const getStudentIdFromToken = async (req) => {
   // Fallback: email mapping
   if (email) {
     const [[student]] = await pool.query(
-      `SELECT student_id FROM students WHERE email = ?`,
+      `SELECT student_id FROM students WHERE email = ? AND is_active = 1`,
       [email]
     );
     return student?.student_id || null;

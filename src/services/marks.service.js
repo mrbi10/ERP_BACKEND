@@ -23,7 +23,7 @@ exports.addOrUpdateMarks = async ({
 
 exports.getStudentByRollNo = async (rollNo) => {
   const [[row]] = await pool.query(
-    "SELECT student_id, name AS student_name FROM students WHERE roll_no = ?",
+    "SELECT student_id, name AS student_name FROM students WHERE roll_no = ? AND is_active = 1",
     [rollNo]
   );
   return row;
