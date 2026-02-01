@@ -14,10 +14,11 @@ exports.login = async ({ email, password }) => {
       u.dept_id,
       u.assigned_class_id,
       u.is_active,
-      s.roll_no
+      s.roll_no,
+      s.class_id
     FROM users u
     LEFT JOIN students s 
-      ON s.user_id = u.user_id
+  ON s.user_id = u.user_id AND u.role = 'student'
     WHERE (u.email = ? OR s.roll_no = ?)
       AND u.is_active = 1
     LIMIT 1
@@ -43,9 +44,10 @@ exports.login = async ({ email, password }) => {
       id: user.user_id,
       role: user.role,
       name: user.name,
+      roll_no: user.role === "student" ? user.roll_no : null,
       dept_id: user.dept_id,
+      class_id: user.role === "student" ? user.class_id : null,
       assigned_class_id: user.assigned_class_id || null,
-      roll_no: user.roll_no || null,
       sessionExpiry: sevenHours,
     },
     process.env.JWT_SECRET,
