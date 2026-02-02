@@ -1,4 +1,6 @@
 const pool = require("../config/db");
+const mailer = require("../utils/mailer");
+const { logActivity } = require("../services/activityLog.service");
 const { getStudentIdFromToken } = require("../utils/student");
 const {
   submitAttemptInternal,
@@ -317,13 +319,34 @@ exports.getGlobalResults = async (user) => {
 
   const [rows] = await pool.query(`
     SELECT
+      -- 🔑 IDs (frontend depends on these)
+      s.student_id,
+      t.test_id,
+      c.course_id,
+
+      -- Display fields
       c.name AS course_name,
       t.title AS test_title,
       s.roll_no,
       s.name AS student_name,
+      s.dept_id,
+      s.class_id,
+
+      -- Scores
       a.score,
+      t.total_marks,
+      ROUND((a.score / t.total_marks) * 100, 2) AS percentage,
       a.pass_status,
-      a.submitted_at
+
+      -- Attempt info
+      a.attempt_id,
+      a.submitted_at,
+
+      ROW_NUMBER() OVER (
+        PARTITION BY a.student_id, a.test_id
+        ORDER BY a.started_at
+      ) AS attempt_no
+
     FROM test_attempts a
     JOIN tests t ON t.test_id = a.test_id
     JOIN training_courses c ON c.course_id = t.course_id
@@ -334,6 +357,7 @@ exports.getGlobalResults = async (user) => {
 
   return rows;
 };
+
 
 
 exports.getStudentResults = async (user) => {
@@ -644,6 +668,7 @@ exports.saveTestNotificationSettings = async ({ testId, settings, userId }) => {
 
 
 // ================= SEND NOTIFICATIONS =================
+
 exports.sendTestNotifications = async ({
   req,
   testId,
@@ -658,18 +683,36 @@ exports.sendTestNotifications = async ({
       [testId]
     );
 
+    if (!test) {
+      throw new Error("Test not found");
+    }
+
     const [students] = await connection.query(
       `
-      SELECT s.student_id, s.name, s.email
-      FROM students s
-      JOIN training_test_assignments a
-        ON a.dept_id = s.dept_id
-       AND a.class_id = s.class_id
-      WHERE a.test_id = ? AND s.is_active = 1
-        AND s.email IS NOT NULL
-      `,
-      [testId]
+  SELECT 
+    0 AS student_id,
+    'Test User' AS name,
+    ? AS email
+  `,
+      [process.env.TEST_MAIL_RECEIVER]
     );
+
+
+    //  const [students] = await connection.query(
+    //   `
+    //   SELECT s.student_id, s.name, s.email
+    //   FROM students s
+    //   JOIN training_test_assignments a
+    //     ON a.dept_id = s.dept_id
+    //    AND a.class_id = s.class_id
+    //   WHERE a.test_id = ?
+    //     AND s.is_active = 1
+    //     AND s.email IS NOT NULL
+    //   `,
+    //   [testId]
+    // );
+
+
 
     if (!students.length) {
       return { message: "No recipients found" };
@@ -688,7 +731,7 @@ exports.sendTestNotifications = async ({
         testId,
         eventType,
         "Placement Exam Notification",
-        `${eventType} notification for placement exam`,
+        `${eventType} notification for placement exam: ${test.title}`,
         students.length,
         userId
       ]
@@ -714,17 +757,66 @@ exports.sendTestNotifications = async ({
 
     await connection.commit();
 
+    for (const student of students) {
+      const html = `
+        <h2>Placement Exam Notification</h2>
+        <p>Hello ${student.name},</p>
+        <p>
+          This is to inform you about the following update regarding
+          <strong>${test.title}</strong>.
+        </p>
+        <p><strong>Event:</strong> ${eventType}</p>
+        <p>Please login to the ERP portal for more details.</p>
+        <br/>
+        <p style="font-size:12px;color:#777">
+          This is an automated message. Do not reply.
+        </p>
+      `;
+
+      await mailer.sendMail(
+        student.email,
+        `Placement Exam: ${test.title}`,
+        html
+      );
+    }
+
+    // 6️⃣ Activity log
+    await logActivity({
+      req,
+      user: { user_id: userId },
+      module: "NOTIFICATIONS",
+      actionType: "TEST_NOTIFICATION_SENT",
+      action: "Placement exam notification sent",
+      description: `${eventType} notification sent to ${students.length} students`,
+      refTable: "tests",
+      refId: testId
+    });
+
     return {
       message: "Notification sent successfully",
       recipients: students.length
     };
+
   } catch (err) {
     await connection.rollback();
+
+    await logActivity({
+      req,
+      user: { user_id: userId },
+      module: "NOTIFICATIONS",
+      actionType: "TEST_NOTIFICATION_FAILED",
+      action: "Placement exam notification failed",
+      description: err.message,
+      refTable: "tests",
+      refId: testId
+    });
+
     throw err;
   } finally {
     connection.release();
   }
 };
+
 
 exports.startTest = async (req) => {
   const { testId } = req.params;
