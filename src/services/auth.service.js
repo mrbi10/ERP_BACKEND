@@ -2,6 +2,30 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 
+
+const buildTokenAndUser = (user) => {
+  const sevenHours = Date.now() + 7 * 60 * 60 * 1000;
+
+  const token = jwt.sign(
+    {
+      id: user.user_id,
+      role: user.role,
+      name: user.name,
+      roll_no: user.role === "student" ? user.roll_no : null,
+      dept_id: user.dept_id,
+      class_id: user.role === "student" ? user.class_id : null,
+      assigned_class_id: user.assigned_class_id || null,
+      sessionExpiry: sevenHours,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7h" }
+  );
+
+  delete user.password;
+  return { token, user };
+};
+
+
 exports.login = async ({ email, password }) => {
   const [rows] = await pool.query(
     `
@@ -37,28 +61,42 @@ exports.login = async ({ email, password }) => {
     throw new Error("Incorrect password");
   }
 
-  const sevenHours = Date.now() + 7 * 60 * 60 * 1000;
+  return buildTokenAndUser(user);
 
-  const token = jwt.sign(
-    {
-      id: user.user_id,
-      role: user.role,
-      name: user.name,
-      roll_no: user.role === "student" ? user.roll_no : null,
-      dept_id: user.dept_id,
-      class_id: user.role === "student" ? user.class_id : null,
-      assigned_class_id: user.assigned_class_id || null,
-      sessionExpiry: sevenHours,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7h" }
-  );
-
-  delete user.password;
-
-  return { token, user };
 };
 
+
+exports.loginWithOtp = async (email) => {
+  const [rows] = await pool.query(
+    `
+    SELECT 
+      u.user_id,
+      u.name,
+      u.email,
+      u.password,
+      u.role,
+      u.dept_id,
+      u.assigned_class_id,
+      u.is_active,
+      s.roll_no,
+      s.class_id
+    FROM users u
+    LEFT JOIN students s 
+      ON s.user_id = u.user_id AND u.role = 'student'
+    WHERE u.email = ?
+      AND u.is_active = 1
+    LIMIT 1
+    `,
+    [email]
+  );
+
+  if (!rows.length) {
+    throw new Error("User not found or inactive");
+  }
+
+  const user = rows[0];
+  return buildTokenAndUser(user);
+};
 
 
 exports.getUserByEmail = async (email) => {
@@ -88,13 +126,14 @@ exports.getUserByResetToken = async (token) => {
     SELECT *
     FROM users
     WHERE reset_token = ?
-      AND reset_expires > NOW()
+      AND reset_expires > UTC_TIMESTAMP()
       AND is_active = 1
     `,
     [token]
   );
   return row;
 };
+
 
 
 exports.updatePassword = async (userId, hashedPassword) => {

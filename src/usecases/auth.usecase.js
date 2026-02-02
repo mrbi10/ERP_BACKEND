@@ -94,6 +94,7 @@ exports.resetPassword = async (req, res) => {
     const { newPassword } = req.body;
 
     const user = await authService.getUserByResetToken(token);
+    
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
