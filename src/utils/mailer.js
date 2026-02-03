@@ -87,7 +87,7 @@ const baseTemplate = (title, content) => `
 
 /* ================= RESET PASSWORD MAIL ================= */
 exports.sendResetMail = async (to, name, token) => {
-  const link = `${process.env.FRONTEND_URL}/resetpassword/${token}`;
+  const link = `${process.env.FRONTEND_URL}/#resetpassword/${token}`;
 
   const content = `
     <h1 style="font-size: 24px; font-weight: 700; color: #1E293B; margin: 0 0 16px 0;">Password Reset Request</h1>
