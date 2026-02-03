@@ -54,6 +54,11 @@ exports.getStudentsByClassed = async (req, res) => {
     const { classId } = req.params;
     const { role, dept_id } = req.user;
 
+    if (!classId) {
+      return res.status(400).json({ message: "classId is required" });
+    }
+
+    console.log(classId, role, dept_id);
     const rows = await service.getStudentsByClassed({
       classId,
       role,
@@ -73,10 +78,14 @@ exports.getStudentsByClassed = async (req, res) => {
       success: true,
       data: rows
     });
-  } catch (err) {
+
+  }
+
+  catch (err) {
     res.status(500).json({
-      success: false,
-      message: err.message
+      suyccess: false,
+      message: "Server error",
+      error: err.message
     });
   }
 };

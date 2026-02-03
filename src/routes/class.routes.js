@@ -12,18 +12,9 @@ router.get("/classes", authenticateToken, classusecase.getAllClasses);
 
 
 router.get(
-    "/classes/:classId/students",
-    authenticateToken,
-    async (req, res) => {
-        try {
-            const result = await classusecase.getStudentsByClassed(req);
-            res.json(result);
-        } catch (err) {
-            console.error("Class students route error:", err);
-            res.status(500).json({
-                message: err.message || "Server error",
-            });
-        }
-    }
+  "/classes/:classId/students",
+  authenticateToken,
+  classusecase.getStudentsByClassed
 );
+
 module.exports = router;
