@@ -259,44 +259,128 @@ exports.getTestAssignmentsWithStudents = async (testId) => {
 };
 
 exports.getGlobalAnalytics = async (user) => {
-  const { role, assigned_class_id, dept_id, user_id } = user;
+  const { role, id, assigned_class_id, dept_id } = user;
 
-  let filter = `
+  let where = `
     WHERE a.status IN ('submitted','auto_submitted')
-      AND t.is_active = 1
-      AND c.is_active = 1
+      AND a.submitted_at IS NOT NULL
   `;
   const params = [];
 
-  if (role === "trainer") {
-    filter += " AND c.trainer_id = ?";
-    params.push(user_id);
-  } else if (role === "CA") {
-    filter += " AND s.class_id = ?";
-    params.push(assigned_class_id);
-  } else if (role === "HOD") {
-    filter += " AND s.dept_id = ?";
-    params.push(dept_id);
-  }
+  /* ---------------- ROLE SCOPING ---------------- */
 
-  const [[summary]] = await pool.query(`
-    SELECT
-      COUNT(DISTINCT s.student_id) AS total_students,
-      COUNT(DISTINCT t.test_id) AS total_tests,
-      COUNT(a.attempt_id) AS total_attempts,
-      ROUND(
-        SUM(a.pass_status = 'pass') / NULLIF(COUNT(a.attempt_id), 0) * 100,
-        2
-      ) AS pass_percentage
+  if (role === "trainer") {
+    where += " AND c.trainer_id = ?";
+    params.push(id);
+
+  } else if (role === "CA") {
+    where += " AND s.class_id = ?";
+    params.push(assigned_class_id);
+
+  } else if (role === "HOD") {
+    where += " AND s.dept_id = ?";
+    params.push(dept_id);
+
+  }
+  // Principal → full access (no extra filter)
+
+  /* ---------------- BASE QUERY ---------------- */
+
+  const baseQuery = `
     FROM test_attempts a
     JOIN tests t ON t.test_id = a.test_id
     JOIN training_courses c ON c.course_id = t.course_id
     JOIN students s ON s.student_id = a.student_id
-    ${filter}
-  `, params);
+    ${where}
+  `;
 
-  return { summary };
+  /* ---------------- SUMMARY ---------------- */
+
+  const [[summary]] = await pool.query(
+    `
+    SELECT
+      COUNT(DISTINCT s.student_id) AS total_students,
+      COUNT(DISTINCT t.test_id)    AS total_tests,
+      COUNT(*)                     AS total_attempts,
+      COALESCE(SUM(a.pass_status = 'pass'), 0) AS passed,
+      COALESCE(SUM(a.pass_status = 'fail'), 0) AS failed,
+      ROUND(
+        COALESCE(SUM(a.pass_status = 'pass'), 0)
+        / NULLIF(COUNT(*), 0) * 100,
+        2
+      ) AS pass_percentage
+    ${baseQuery}
+    `,
+    params
+  );
+
+  /* ---------------- TEST WISE ---------------- */
+
+  const [test_wise] = await pool.query(
+    `
+    SELECT
+      t.test_id,
+      t.title,
+      COUNT(*) AS attempts,
+      COALESCE(SUM(a.pass_status = 'pass'), 0) AS passed,
+      ROUND(
+        COALESCE(SUM(a.pass_status = 'pass'), 0)
+        / NULLIF(COUNT(*), 0) * 100,
+        2
+      ) AS pass_percentage
+    ${baseQuery}
+    GROUP BY t.test_id, t.title
+    ORDER BY t.title
+    `,
+    params
+  );
+
+  /* ---------------- DEPT WISE (NON-TRAINER) ---------------- */
+
+  let dept_wise = [];
+  {
+    const [rows] = await pool.query(
+      `
+      SELECT
+        s.dept_id,
+        COUNT(*) AS attempts,
+        COALESCE(SUM(a.pass_status = 'pass'), 0) AS passed,
+        ROUND(
+          COALESCE(SUM(a.pass_status = 'pass'), 0)
+          / NULLIF(COUNT(*), 0) * 100,
+          2
+        ) AS pass_percentage
+      ${baseQuery}
+      GROUP BY s.dept_id
+      ORDER BY s.dept_id
+      `,
+      params
+    );
+    dept_wise = rows;
+  }
+
+  /* ---------------- SUBMISSION BREAKDOWN ---------------- */
+
+  const [[submission_breakdown]] = await pool.query(
+    `
+    SELECT
+      COALESCE(SUM(a.status = 'submitted'), 0)      AS manual_submissions,
+      COALESCE(SUM(a.status = 'auto_submitted'), 0) AS auto_submissions
+    ${baseQuery}
+    `,
+    params
+  );
+
+  /* ---------------- FINAL RESPONSE ---------------- */
+
+  return {
+    summary,
+    test_wise,
+    dept_wise,
+    submission_breakdown
+  };
 };
+
 
 
 exports.getGlobalResults = async (user) => {
